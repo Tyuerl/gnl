@@ -6,7 +6,7 @@
 /*   By: glavette <glavette@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/12/28 02:48:57 by glavette          #+#    #+#             */
-/*   Updated: 2021/12/31 17:43:00 by glavette         ###   ########.fr       */
+/*   Updated: 2022/01/02 15:00:13 by glavette         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,8 @@ int	ft_strlen(char *s)
 {
 	int	count;
 
+	if (!s)
+		return (0);
 	count = 0;
 	while (s[count] != '\0' && s[count] != '\n')
 		count++;

@@ -6,11 +6,30 @@
 /*   By: glavette <glavette@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/12/28 09:04:51 by glavette          #+#    #+#             */
-/*   Updated: 2021/12/31 14:44:23 by glavette         ###   ########.fr       */
+/*   Updated: 2022/01/02 20:25:05 by glavette         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "includes/get_next_line.h"
+
+char	*ft_fresher(char	*str)
+{
+	free(str);
+	return (NULL);
+}
+
+int	ft_strlcpy(char *dst, char *src, int dstsize)
+{
+	int	i;
+
+	if (dst == 0 || src == 0 || dstsize == 0)
+		return (ft_strlen(src));
+	i = -1;
+	while (src[++i] && i < dstsize - 1)
+		dst[i] = src[i];
+	dst[i] = '\0';
+	return (ft_strlen(src));
+}
 
 static char	*ft_check_line(char *str, char *buff, int *counter)
 {
@@ -21,7 +40,7 @@ static char	*ft_check_line(char *str, char *buff, int *counter)
 	i = 0;
 	end = ft_strlen(buff);
 	temp = malloc (end + *counter + 1);
-	if (temp == NULL)
+	if (temp == NULL || buff == NULL)
 		return (0);
 	if (*counter != 0)
 	{
@@ -41,16 +60,15 @@ static char	*ft_check_line(char *str, char *buff, int *counter)
 	return (temp);
 }
 
-static char	*ft_read_line(int fd, char *str, char *buff)
+static char	*ft_read_line(int fd, char *str, char *buff, char *remem)
 {
 	int	reading;
 	int	i;
 	int	flag;
 
 	flag = 0;
+	reading = 2;
 	i = 0;
-	reading = read(fd, buff, BUFFER_SIZE);
-	buff[reading] = '\0';
 	while (reading > 0 && !(flag == 10))
 	{
 		str = ft_check_line(str, buff, &i);
@@ -60,6 +78,10 @@ static char	*ft_read_line(int fd, char *str, char *buff)
 		{
 			reading = read(fd, buff, BUFFER_SIZE);
 			buff[reading] = '\0';
+			if (reading < 0)
+				str = ft_fresher(str);
+			if (reading <= 0 && fd != 0)
+				remem = ft_fresher(remem);
 		}
 	}
 	if (str != NULL && str[i] == '\n')
@@ -69,14 +91,29 @@ static char	*ft_read_line(int fd, char *str, char *buff)
 
 char	*get_next_line(int fd)
 {
-	char	*buff;
-	char	*str;
+	char		*buff;
+	char		*str;
+	int			i;
+	int			j;
+	static char	*temp;
 
+	j = -1;
 	str = 0;
+	i = ft_strlen(temp) + 1;
 	buff = malloc (BUFFER_SIZE + 1);
 	if (buff == NULL)
 		return (0);
-	str = ft_read_line(fd, str, buff);
+	if (temp == NULL && fd != 0)
+		temp = malloc (BUFFER_SIZE + 1);
+	else if (fd != 0)
+	{
+		while (i + ++j < BUFFER_SIZE + 1 && buff[j])
+			buff[j] = temp[i + j];
+	}
+	if (temp == NULL)
+		return (ft_fresher(buff));
+	str = ft_read_line(fd, str, buff, temp);
+	ft_strlcpy(temp, buff, BUFFER_SIZE);
 	free(buff);
 	return (str);
 }
