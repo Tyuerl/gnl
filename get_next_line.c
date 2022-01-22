@@ -5,132 +5,126 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: glavette <glavette@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/12/28 09:04:51 by glavette          #+#    #+#             */
-/*   Updated: 2022/01/02 20:25:05 by glavette         ###   ########.fr       */
+/*   Created: 2022/01/22 21:45:48 by glavette          #+#    #+#             */
+/*   Updated: 2022/01/22 23:50:52 by glavette         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "includes/get_next_line.h"
+#include "get_next_line.h"
 
-char	*ft_fresher(char	*str)
-{
-	free(str);
-	return (NULL);
-}
-
-int	ft_strlcpy(char *dst, char *src, int dstsize)
+void	ft_check_past(char *buff, char *past)
 {
 	int	i;
 
-	if (dst == 0 || src == 0 || dstsize == 0)
-		return (ft_strlen(src));
 	i = -1;
-	while (src[++i] && i < dstsize - 1)
-		dst[i] = src[i];
-	dst[i] = '\0';
-	return (ft_strlen(src));
+	if (!past)
+		return ;
+	while (past[++i])
+		buff[i] = past[i];
+	buff[i] = 0;
+	free(past);
+	past = 0;
+	return ;
 }
 
-static char	*ft_check_line(char *str, char *buff, int *counter)
+char	*ft_save_next_line(char *buff, char **past)
 {
-	int		i;
-	int		end;
-	char	*temp;
-
-	i = 0;
-	end = ft_strlen(buff);
-	temp = malloc (end + *counter + 1);
-	if (temp == NULL || buff == NULL)
-		return (0);
-	if (*counter != 0)
-	{
-		i--;
-		while (++i < *counter)
-			temp[i] = str[i];
-		free(str);
-		i = 0;
-	}
-	while (i < end)
-	{
-		temp[*counter] = buff[i];
-		(*counter)++;
-		i++;
-	}
-	temp[*counter] = buff[end];
-	return (temp);
-}
-
-static char	*ft_read_line(int fd, char *str, char *buff, char *remem)
-{
-	int	reading;
 	int	i;
-	int	flag;
+	int	j;
 
-	flag = 0;
-	reading = 2;
+	j = 0;
 	i = 0;
-	while (reading > 0 && !(flag == 10))
+	if (ft_check_nl(buff) < 0)
+		return (0);
+	i = ft_strlen(buff);
+	if (i < BUFFER_SIZE)
 	{
-		str = ft_check_line(str, buff, &i);
-		if ((str == NULL) || *(str + i) == '\n')
-			flag = 10;
-		if (flag != 10)
+		(*past) = malloc(BUFFER_SIZE - i + 1);
+		if (*past == 0)
+			return (0);
+		while (i + j < BUFFER_SIZE)
+		{
+			*(*(past) + j) = buff[i + j];
+			j++;
+		}
+		*(*(past) + j) = 0;
+	}
+	buff[i] = 0;
+	return (*(past));
+}
+
+char	*ft_check_line(char *str, char *buff, int *flag)
+{
+	int		len;
+	char	*new_str;
+	int		i;
+
+	i = -1;
+	len = ft_strlen(str);
+	new_str = malloc (len + ft_strlen(buff) + 1);
+	if (new_str == 0)
+	{
+		*flag = -1;
+		return (0);
+	}
+	while (++i < len)
+	new_str[i] = str[i];
+	i = -1;
+	if (str)
+		free (str);
+	while (++i < ft_strlen(buff))
+		new_str[i + len] = buff[i];
+	new_str[i + len] = buff[i];
+	if (new_str[i + len - 1] == '\n')
+		*(flag) = -1;
+	return (new_str);
+}
+
+char	*ft_read_line(char	*str, char	*buff, char	**past, int fd)
+{
+	int	flag;
+	int	reading;
+
+	reading = 2;
+	flag = 2;
+	while (flag > 0 && reading > 0 && fd >= 0)
+	{
+		*past = ft_save_next_line(buff, past);
+		str = ft_check_line(str, buff, &flag);
+		if (flag != -1)
 		{
 			reading = read(fd, buff, BUFFER_SIZE);
-			buff[reading] = '\0';
-			if (reading < 0)
-				str = ft_fresher(str);
-			if (reading <= 0 && fd != 0)
-				remem = ft_fresher(remem);
+			if (reading >= 0)
+				buff[reading] = 0;
 		}
 	}
-	if (str != NULL && str[i] == '\n')
-		str[i + 1] = 0;
+	free (buff);
+	buff = 0;
+	if (str && str[0] == 0)
+	{
+		free(str);
+		str = 0;
+	}
 	return (str);
 }
 
 char	*get_next_line(int fd)
 {
+	static char	*past;
 	char		*buff;
 	char		*str;
-	int			i;
-	int			j;
-	static char	*temp;
+	int			flag;
+	int			reading;
 
-	j = -1;
 	str = 0;
-	i = ft_strlen(temp) + 1;
+	reading = 1;
+	flag = 1;
+	buff = 0;
 	buff = malloc (BUFFER_SIZE + 1);
-	if (buff == NULL)
+	if (buff == 0)
 		return (0);
-	if (temp == NULL && fd != 0)
-		temp = malloc (BUFFER_SIZE + 1);
-	else if (fd != 0)
-	{
-		while (i + ++j < BUFFER_SIZE + 1 && buff[j])
-			buff[j] = temp[i + j];
-	}
-	if (temp == NULL)
-		return (ft_fresher(buff));
-	str = ft_read_line(fd, str, buff, temp);
-	ft_strlcpy(temp, buff, BUFFER_SIZE);
-	free(buff);
+	buff[0] = 0;
+	ft_check_past(buff, past);
+	str = ft_read_line(str, buff, &past, fd);
 	return (str);
-}
-
-int	ft_strncmp(const char *s1, const char *s2, int n)
-{
-	int	i;
-
-	i = 0;
-	while (s1[i] && s2[i] && i < n)
-	{
-		if (s1[i] != s2[i])
-			return ((unsigned char)s1[i] - (unsigned char)s2[i]);
-		i++;
-	}
-	if (i < n)
-		if (s1[i] != s2[i])
-			return ((unsigned char)s1[i] - (unsigned char)s2[i]);
-	return (0);
 }
